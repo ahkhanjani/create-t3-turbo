@@ -1,13 +1,13 @@
-import React, { useState } from "react";
+import { useState } from "react";
 import { Button, Pressable, Text, TextInput, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Link, Stack } from "expo-router";
-import { FlashList } from "@shopify/flash-list";
+import { LegendList } from "@legendapp/list";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import type { RouterOutputs } from "~/utils/api";
 import { trpc } from "~/utils/api";
-import { useSignIn, useSignOut, useUser } from "~/utils/auth";
+import { authClient } from "~/utils/auth";
 
 function PostCard(props: {
   post: RouterOutputs["post"]["all"][number];
@@ -99,18 +99,23 @@ function CreatePost() {
 }
 
 function MobileAuth() {
-  const user = useUser();
-  const signIn = useSignIn();
-  const signOut = useSignOut();
+  const { data: session } = authClient.useSession();
 
   return (
     <>
-      <Text className="pb-2 text-center text-xl font-semibold text-white">
-        {user?.name ?? "Not logged in"}
+      <Text className="pb-2 text-center text-xl font-semibold text-zinc-900">
+        {session?.user.name ? `Hello, ${session.user.name}` : "Not logged in"}
       </Text>
       <Button
-        onPress={() => (user ? signOut() : signIn())}
-        title={user ? "Sign Out" : "Sign In With Discord"}
+        onPress={() =>
+          session
+            ? authClient.signOut()
+            : authClient.signIn.social({
+                provider: "discord",
+                callbackURL: "/",
+              })
+        }
+        title={session ? "Sign Out" : "Sign In With Discord"}
         color={"#5B65E9"}
       />
     </>
@@ -146,9 +151,10 @@ export default function Index() {
           </Text>
         </View>
 
-        <FlashList
-          data={postQuery.data}
+        <LegendList
+          data={postQuery.data ?? []}
           estimatedItemSize={20}
+          keyExtractor={(item) => item.id}
           ItemSeparatorComponent={() => <View className="h-2" />}
           renderItem={(p) => (
             <PostCard

@@ -2,11 +2,10 @@
 
 > [!NOTE]
 >
-> NextAuth setup now works for Expo app!
-
-> [!NOTE]
->
-> OAuth deployments are now working for preview deployments. Read [deployment guide](https://github.com/t3-oss/create-t3-turbo#auth-proxy) and [check out the source](./apps/auth-proxy) to learn more!
+> create-t3-turbo now uses better-auth for authentication!
+> Look out for bugs as we're working through the last issues,
+> especially, the oauth proxy might not play very nice with Expo
+> so you might need to disable that in [`@acme/auth`](./packages/auth/src/index.ts)
 
 ## Installation
 
@@ -28,7 +27,7 @@ npx create-turbo@latest -e https://github.com/t3-oss/create-t3-turbo
 
 Ever wondered how to migrate your T3 application into a monorepo? Stop right here! This is the perfect starter repo to get you running with the perfect stack!
 
-It uses [Turborepo](https://turborepo.org) and contains:
+It uses [Turborepo](https://turborepo.com) and contains:
 
 ```text
 .github
@@ -37,18 +36,12 @@ It uses [Turborepo](https://turborepo.org) and contains:
 .vscode
   └─ Recommended extensions and settings for VSCode users
 apps
-  ├─ auth-proxy
-  |   ├─ Nitro server to proxy OAuth requests in preview deployments
-  |   └─ Uses Auth.js Core
   ├─ expo
-  |   ├─ Expo SDK 53 (EXPERIMENTAL)
-  |   |   > [!WARNING]
-  |   |   > Using Expo SDK 53 (canary) to unblock Next.js 15 / React 19 support.
-  |   |   > This is experimental and might not work as expected.
-  |   ├─ React Native using React 19
-  |   ├─ Navigation using Expo Router
-  |   ├─ Tailwind using NativeWind
-  |   └─ Typesafe API calls using tRPC
+  │   ├─ Expo SDK 53
+  │   ├─ React Native using React 19
+  │   ├─ Navigation using Expo Router
+  │   ├─ Tailwind using NativeWind
+  │   └─ Typesafe API calls using tRPC
   └─ next.js
       ├─ Next.js 15
       ├─ React 19
@@ -56,20 +49,20 @@ apps
       └─ E2E Typesafe API Server & Client
 packages
   ├─ api
-  |   └─ tRPC v11 router definition
+  │   └─ tRPC v11 router definition
   ├─ auth
-  |   └─ Authentication using next-auth.
+  │   └─ Authentication using better-auth.
   ├─ db
-  |   └─ Typesafe db calls using Drizzle & Supabase
+  │   └─ Typesafe db calls using Drizzle & Supabase
   └─ ui
       └─ Start of a UI package for the webapp using shadcn-ui
 tooling
   ├─ eslint
-  |   └─ shared, fine-grained, eslint presets
+  │   └─ shared, fine-grained, eslint presets
   ├─ prettier
-  |   └─ shared prettier configuration
+  │   └─ shared prettier configuration
   ├─ tailwind
-  |   └─ shared tailwind configuration
+  │   └─ shared tailwind configuration
   └─ typescript
       └─ shared tsconfig you can extend from
 ```
@@ -97,7 +90,31 @@ cp .env.example .env
 pnpm db:push
 ```
 
-### 2. Configure Expo `dev`-script
+### 2. Generate Better Auth Schema
+
+This project uses [Better Auth](https://www.better-auth.com) for authentication. The auth schema needs to be generated using the Better Auth CLI before you can use the authentication features.
+
+```bash
+# Generate the Better Auth schema
+pnpm --filter @acme/auth generate
+```
+
+This command runs the Better Auth CLI with the following configuration:
+
+- **Config file**: `packages/auth/script/auth-cli.ts` - A CLI-only configuration file (isolated from src to prevent imports)
+- **Output**: `packages/db/src/auth-schema.ts` - Generated Drizzle schema for authentication tables
+
+The generation process:
+
+1. Reads the Better Auth configuration from `packages/auth/script/auth-cli.ts`
+2. Generates the appropriate database schema based on your auth setup
+3. Outputs a Drizzle-compatible schema file to the `@acme/db` package
+
+> **Note**: The `auth-cli.ts` file is placed in the `script/` directory (instead of `src/`) to prevent accidental imports from other parts of the codebase. This file is exclusively for CLI schema generation and should **not** be used directly in your application. For runtime authentication, use the configuration from `packages/auth/src/index.ts`.
+
+For more information about the Better Auth CLI, see the [official documentation](https://www.better-auth.com/docs/concepts/cli#generate).
+
+### 3. Configure Expo `dev`-script
 
 #### Use iOS Simulator
 
@@ -123,21 +140,21 @@ pnpm db:push
 
 3. Run `pnpm dev` at the project root folder.
 
-### 3. Configuring Next-Auth to work with Expo
+### 4. Configuring Better-Auth to work with Expo
 
-In order to get Next-Auth to work with Expo, you must either:
+In order to get Better-Auth to work with Expo, you must either:
 
 #### Deploy the Auth Proxy (RECOMMENDED)
 
-In [apps/auth-proxy](./apps/auth-proxy) you can find a Nitro server that proxies OAuth requests. By deploying this and setting the `AUTH_REDIRECT_PROXY_URL` environment variable to the URL of this proxy, you can get OAuth working in preview deployments and development for Expo apps. See more deployment instructions in the [auth proxy README](./apps/auth-proxy/README.md).
+Better-auth comes with an [auth proxy plugin](https://www.better-auth.com/docs/plugins/oauth-proxy). By deploying the Next.js app, you can get OAuth working in preview deployments and development for Expo apps.
 
-By using the proxy server, the Next.js apps will forward any auth requests to the proxy server, which will handle the OAuth flow and then redirect back to the Next.js app. This makes it easy to get OAuth working since you'll have a stable URL that is publically accessible and doesn't change for every deployment and doesn't rely on what port the app is running on. So if port 3000 is taken and your Next.js app starts at port 3001 instead, your auth should still work without having to reconfigure the OAuth provider.
+By using the proxy plugin, the Next.js apps will forward any auth requests to the proxy server, which will handle the OAuth flow and then redirect back to the Next.js app. This makes it easy to get OAuth working since you'll have a stable URL that is publicly accessible and doesn't change for every deployment and doesn't rely on what port the app is running on. So if port 3000 is taken and your Next.js app starts at port 3001 instead, your auth should still work without having to reconfigure the OAuth provider.
 
 #### Add your local IP to your OAuth provider
 
 You can alternatively add your local IP (e.g. `192.168.x.y:$PORT`) to your OAuth provider. This may not be as reliable as your local IP may change when you change networks. Some OAuth providers may also only support a single callback URL for each app making this approach unviable for some providers (e.g. GitHub).
 
-### 4a. When it's time to add a new UI component
+### 5a. When it's time to add a new UI component
 
 Run the `ui-add` script to add a new UI component using the interactive `shadcn/ui` CLI:
 
@@ -147,7 +164,7 @@ pnpm ui-add
 
 When the component(s) has been installed, you should be good to go and start using it in your app.
 
-### 4b. When it's time to add a new package
+### 5b. When it's time to add a new package
 
 To add a new package, simply run `pnpm turbo gen init` in the monorepo root. This will prompt you for a package name as well as if you want to install any dependencies to the new package (of course you can also do this yourself later).
 
@@ -182,20 +199,13 @@ Let's deploy the Next.js application to [Vercel](https://vercel.com). If you've 
 
 1. Create a new project on Vercel, select the `apps/nextjs` folder as the root directory. Vercel's zero-config system should handle all configurations for you.
 
-2. Add your `DATABASE_URL` environment variable.
+2. Add your `POSTGRES_URL` environment variable.
 
 3. Done! Your app should successfully deploy. Assign your domain and use that instead of `localhost` for the `url` in the Expo app so that your Expo app can communicate with your backend when you are not in development.
 
 ### Auth Proxy
 
-The auth proxy is a Nitro server that proxies OAuth requests in preview deployments. This is required for the Next.js app to be able to authenticate users in preview deployments. The auth proxy is not used for OAuth requests in production deployments. To get it running, it's easiest to use Vercel Edge functions. See the [Nitro docs](https://nitro.unjs.io/deploy/providers/vercel#vercel-edge-functions) for how to deploy Nitro to Vercel.
-
-Then, there are some environment variables you need to set in order to get OAuth working:
-
-- For the Next.js app, set `AUTH_REDIRECT_PROXY_URL` to the URL of the auth proxy.
-- For the auth proxy server, set `AUTH_REDIRECT_PROXY_URL` to the same as above, as well as `AUTH_DISCORD_ID`, `AUTH_DISCORD_SECRET` (or the equivalent for your OAuth provider(s)). Lastly, set `AUTH_SECRET` **to the same value as in the Next.js app** for preview environments.
-
-Read more about the setup in [the auth proxy README](./apps/auth-proxy/README.md).
+The auth proxy comes as a better-auth plugin. This is required for the Next.js app to be able to authenticate users in preview deployments. The auth proxy is not used for OAuth request in production deployments. The easiest way to get it running is to deploy the Next.js app to vercel.
 
 ### Expo
 
