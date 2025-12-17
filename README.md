@@ -2,10 +2,7 @@
 
 > [!NOTE]
 >
-> create-t3-turbo now uses better-auth for authentication!
-> Look out for bugs as we're working through the last issues,
-> especially, the oauth proxy might not play very nice with Expo
-> so you might need to disable that in [`@acme/auth`](./packages/auth/src/index.ts)
+> create-t3-turbo now includes the option to use Tanstack Start for the web app!
 
 ## Installation
 
@@ -37,15 +34,20 @@ It uses [Turborepo](https://turborepo.com) and contains:
   └─ Recommended extensions and settings for VSCode users
 apps
   ├─ expo
-  │   ├─ Expo SDK 53
-  │   ├─ React Native using React 19
+  │   ├─ Expo SDK 54
+  │   ├─ React Native 0.81 using React 19
   │   ├─ Navigation using Expo Router
-  │   ├─ Tailwind using NativeWind
+  │   ├─ Tailwind CSS v4 using NativeWind v5
   │   └─ Typesafe API calls using tRPC
-  └─ next.js
-      ├─ Next.js 15
+  ├─ nextjs
+  │   ├─ Next.js 15
+  │   ├─ React 19
+  │   ├─ Tailwind CSS v4
+  │   └─ E2E Typesafe API Server & Client
+  └─ tanstack-start
+      ├─ Tanstack Start v1 (rc)
       ├─ React 19
-      ├─ Tailwind CSS
+      ├─ Tailwind CSS v4
       └─ E2E Typesafe API Server & Client
 packages
   ├─ api
@@ -62,7 +64,7 @@ tooling
   ├─ prettier
   │   └─ shared prettier configuration
   ├─ tailwind
-  │   └─ shared tailwind configuration
+  │   └─ shared tailwind theme and configuration
   └─ typescript
       └─ shared tsconfig you can extend from
 ```
@@ -77,6 +79,10 @@ tooling
 To get it running, follow the steps below:
 
 ### 1. Setup dependencies
+
+> [!NOTE]
+>
+> While the repo does contain both a Next.js and Tanstack Start version of a web app, you can pick which one you like to use and delete the other folder before starting the setup.
 
 ```bash
 # Install dependencies

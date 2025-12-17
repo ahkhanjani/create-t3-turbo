@@ -1,4 +1,4 @@
-import type { BetterAuthOptions } from "better-auth";
+import type { BetterAuthOptions, BetterAuthPlugin } from "better-auth";
 import { expo } from "@better-auth/expo";
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
@@ -6,13 +6,16 @@ import { oAuthProxy } from "better-auth/plugins";
 
 import { db } from "@acme/db/client";
 
-export function initAuth(options: {
+export function initAuth<
+  TExtraPlugins extends BetterAuthPlugin[] = [],
+>(options: {
   baseUrl: string;
   productionUrl: string;
   secret: string | undefined;
 
   discordClientId: string;
   discordClientSecret: string;
+  extraPlugins?: TExtraPlugins;
 }) {
   const config = {
     database: drizzleAdapter(db, {
@@ -22,13 +25,10 @@ export function initAuth(options: {
     secret: options.secret,
     plugins: [
       oAuthProxy({
-        /**
-         * Auto-inference blocked by https://github.com/better-auth/better-auth/pull/2891
-         */
-        currentURL: options.baseUrl,
         productionURL: options.productionUrl,
       }),
       expo(),
+      ...(options.extraPlugins ?? []),
     ],
     socialProviders: {
       discord: {
@@ -38,6 +38,11 @@ export function initAuth(options: {
       },
     },
     trustedOrigins: ["expo://"],
+    onAPIError: {
+      onError(error, ctx) {
+        console.error("BETTER AUTH API ERROR", error, ctx);
+      },
+    },
   } satisfies BetterAuthOptions;
 
   return betterAuth(config);

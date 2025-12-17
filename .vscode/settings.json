@@ -14,12 +14,19 @@
     { "pattern": "packages/*/" },
     { "pattern": "tooling/*/" }
   ],
+  "files.associations": {
+    "*.css": "tailwindcss"
+  },
+  "files.readonlyInclude": {
+    "**/routeTree.gen.ts": true
+  },
+  "files.watcherExclude": {
+    "**/routeTree.gen.ts": true
+  },
   "prettier.ignorePath": ".gitignore",
   "tailwindCSS.classFunctions": ["cva", "cx", "cn"],
-  "tailwindCSS.experimental.configFile": "./tooling/tailwind/web.ts",
   "typescript.enablePromptUseWorkspaceTsdk": true,
   "typescript.preferences.autoImportFileExcludePatterns": [
-    "zod/dist/types/index.d.ts", // Force auto-imports to v4
     "next/router.d.ts",
     "next/dist/client/router.d.ts"
   ],
